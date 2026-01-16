@@ -120,6 +120,23 @@
             "downloads": 0,
             "rating": 0,
             "featured": true
+        },
+        {
+            "id": "api-format-switcher",
+            "name": "API Format Switcher",
+            "version": "1.0.0",
+            "description": "Display and switch API format (messages, chat/completions, responses) in the status bar",
+            "author": {
+                "name": "Alma Team",
+                "email": "hello@alma.now"
+            },
+            "type": ["ui"],
+            "tags": ["api", "format", "status-bar", "utility", "switcher"],
+            "repository": "https://github.com/yetone/alma-plugins",
+            "path": "plugins/api-format-switcher",
+            "downloads": 0,
+            "rating": 0,
+            "featured": false
         }
     ]
 }
