@@ -39,7 +39,7 @@
             "properties": {
                 "apiFormat.current": {
                     "type": "string",
-                    "default": "messages",
+                    "default": "chat/completions",
                     "description": "Current API format"
                 },
                 "apiFormat.customFormats": {

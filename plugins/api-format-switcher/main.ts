@@ -9,9 +9,9 @@ import type { PluginContext, PluginActivation, QuickPickItem } from 'alma-plugin
 
 // Predefined API formats
 const PREDEFINED_FORMATS = [
-    { value: 'messages', label: 'messages', description: 'Anthropic /v1/messages' },
-    { value: 'chat/completions', label: 'chat/completions', description: 'OpenAI Chat API' },
-    { value: 'responses', label: 'responses', description: 'OpenAI Responses API' },
+    { value: 'chat/completions', label: 'Chat Completions', path: '/chat/completions' },
+    { value: 'responses', label: 'Responses', path: '/responses' },
+    { value: 'messages', label: 'Anthropic Messages', path: '/v1/messages' },
 ];
 
 export async function activate(context: PluginContext): Promise<PluginActivation> {
@@ -28,16 +28,25 @@ export async function activate(context: PluginContext): Promise<PluginActivation
 
     // Get settings
     const getSettings = () => ({
-        current: settings.get<string>('apiFormat.current', 'messages'),
+        current: settings.get<string>('apiFormat.current', 'chat/completions'),
         customFormats: settings.get<string[]>('apiFormat.customFormats', []),
     });
+
+    // Get format display info
+    const getFormatInfo = (value: string) => {
+        const predefined = PREDEFINED_FORMATS.find(f => f.value === value);
+        if (predefined) {
+            return { label: predefined.label, path: predefined.path };
+        }
+        return { label: value, path: value };
+    };
 
     // Get all available formats (predefined + custom)
     const getAllFormats = (): QuickPickItem<string>[] => {
         const { customFormats } = getSettings();
         const formats: QuickPickItem<string>[] = PREDEFINED_FORMATS.map(f => ({
             label: f.label,
-            description: f.description,
+            description: f.path,
             value: f.value,
         }));
 
@@ -56,8 +65,9 @@ export async function activate(context: PluginContext): Promise<PluginActivation
     // Update status bar display
     const updateStatusBar = () => {
         const { current } = getSettings();
-        statusBarItem.text = `API: ${current}`;
-        statusBarItem.tooltip = `Current API Format: ${current}\nClick to switch`;
+        const info = getFormatInfo(current);
+        statusBarItem.text = `API: ${info.label}`;
+        statusBarItem.tooltip = `Current API Format: ${info.label}\nPath: ${info.path}\nClick to switch`;
     };
 
     // Switch format command
@@ -65,10 +75,10 @@ export async function activate(context: PluginContext): Promise<PluginActivation
         const formats = getAllFormats();
         const { current } = getSettings();
 
-        // Mark current format
+        // Mark current format with checkmark
         const items = formats.map(f => ({
             ...f,
-            description: f.value === current ? `${f.description || ''} ✓`.trim() : f.description,
+            label: f.value === current ? `${f.label} ✓` : f.label,
         }));
 
         // Add option to add custom format
@@ -80,7 +90,7 @@ export async function activate(context: PluginContext): Promise<PluginActivation
 
         const selected = await ui.showQuickPick(items, {
             title: 'Select API Format',
-            placeholder: 'Choose an API format or add custom',
+            placeholder: 'Choose an API format',
         });
 
         if (selected === '__add_custom__') {
@@ -88,7 +98,8 @@ export async function activate(context: PluginContext): Promise<PluginActivation
         } else if (selected && selected !== current) {
             await settings.set('apiFormat.current', selected);
             updateStatusBar();
-            ui.showNotification(`API format switched to: ${selected}`, { type: 'success' });
+            const info = getFormatInfo(selected);
+            ui.showNotification(`API format switched to: ${info.label}`, { type: 'success' });
             logger.info(`API format changed to: ${selected}`);
         }
     });
