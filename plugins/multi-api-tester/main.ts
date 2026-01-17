@@ -5,7 +5,7 @@
  */
 
 import type { PluginContext, PluginActivation, Disposable } from 'alma-plugin-api';
-import { createSiteStore, type SiteStore } from './lib/site-store';
+import { createSiteStore } from './lib/site-store';
 import { detectApiFormat, detectFirstWorkingFormat } from './lib/api-detector';
 import { fetchModels, fetchAllModels } from './lib/model-fetcher';
 import { createProviderDefinition } from './lib/provider-factory';
@@ -62,11 +62,12 @@ const testSiteSchema = {
 // ============================================================================
 
 export async function activate(context: PluginContext): Promise<PluginActivation> {
-    const { logger, tools, commands, ui, storage, secrets, settings, providers } = context;
+    const { logger, tools, commands, ui, storage, settings, providers } = context;
 
     logger.info('Multi API Tester plugin activated');
 
-    const siteStore = createSiteStore(storage, secrets);
+    // Use storage.local for site configs and storage.secrets for API keys
+    const siteStore = createSiteStore(storage.local, storage.secrets);
     const providerDisposables: Disposable[] = [];
 
     // =========================================================================
