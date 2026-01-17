@@ -122,18 +122,18 @@
             "featured": true
         },
         {
-            "id": "api-format-switcher",
-            "name": "API Format Switcher",
+            "id": "provider-format-display",
+            "name": "Provider Format Display",
             "version": "1.0.0",
-            "description": "Display and switch API format (messages, chat/completions, responses) in the status bar",
+            "description": "在状态栏实时显示当前 Provider 和 API Format，支持切换时自动更新",
             "author": {
                 "name": "Alma Team",
                 "email": "hello@alma.now"
             },
             "type": ["ui"],
-            "tags": ["api", "format", "status-bar", "utility", "switcher"],
+            "tags": ["provider", "api", "format", "status-bar", "utility"],
             "repository": "https://github.com/yetone/alma-plugins",
-            "path": "plugins/api-format-switcher",
+            "path": "plugins/provider-format-display",
             "downloads": 0,
             "rating": 0,
             "featured": false

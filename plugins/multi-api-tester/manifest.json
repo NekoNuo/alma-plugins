@@ -65,6 +65,11 @@
                 "id": "multi-api-tester.registerProviders",
                 "title": "Register All Sites as Providers",
                 "category": "Multi API Tester"
+            },
+            {
+                "id": "multi-api-tester.debugStatus",
+                "title": "Debug: Show Status",
+                "category": "Multi API Tester"
             }
         ],
         "configuration": {

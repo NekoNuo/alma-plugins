@@ -74,9 +74,12 @@ export async function activate(context: PluginContext): Promise<PluginActivation
     // Load sites from settings and sync to store
     // =========================================================================
     async function syncSitesFromSettings(): Promise<void> {
-        const settingsSites = await settings.get<SettingsSiteConfig[]>('multi-api-tester.sites') ?? [];
+        // Note: settings.get is synchronous, not async
+        const settingsSites = settings.get<SettingsSiteConfig[]>('multi-api-tester.sites') ?? [];
+        logger.info(`Found ${settingsSites.length} sites in settings`);
 
         for (const settingSite of settingsSites) {
+            logger.info(`Processing site from settings: ${settingSite.name} (${settingSite.baseUrl})`);
             // Check if site already exists by name
             const existingSites = await siteStore.getAll();
             const existing = existingSites.find(s => s.name === settingSite.name);
@@ -91,7 +94,9 @@ export async function activate(context: PluginContext): Promise<PluginActivation
                     enabled: settingSite.enabled ?? true,
                     detectedFormat: format as ApiFormat | undefined,
                 });
-                logger.info(`Loaded site from settings: ${settingSite.name}`);
+                logger.info(`Added site from settings: ${settingSite.name}`);
+            } else {
+                logger.info(`Site already exists: ${settingSite.name}`);
             }
         }
     }
@@ -107,14 +112,18 @@ export async function activate(context: PluginContext): Promise<PluginActivation
         providerDisposables.length = 0;
 
         const sites = await siteStore.getAll();
+        logger.info(`Total sites in store: ${sites.length}`);
         const enabledSites = sites.filter(s => s.enabled);
+        logger.info(`Enabled sites: ${enabledSites.length}`);
 
         for (const site of enabledSites) {
             try {
+                logger.info(`Creating provider for: ${site.name} (${site.id})`);
                 const providerDef = createProviderDefinition(site, logger);
+                logger.info(`Registering provider: ${providerDef.id}`);
                 const disposable = providers.register(providerDef);
                 providerDisposables.push(disposable);
-                logger.info(`Registered provider: ${site.name}`);
+                logger.info(`Successfully registered provider: ${site.name}`);
             } catch (error) {
                 logger.error(`Failed to register provider ${site.name}:`, error);
             }
@@ -128,7 +137,7 @@ export async function activate(context: PluginContext): Promise<PluginActivation
     // =========================================================================
     await syncSitesFromSettings();
 
-    const autoRegister = await settings.get<boolean>('multi-api-tester.autoRegisterProviders') ?? true;
+    const autoRegister = settings.get<boolean>('multi-api-tester.autoRegisterProviders') ?? true;
     if (autoRegister) {
         await registerProviders();
     }
@@ -167,7 +176,7 @@ export async function activate(context: PluginContext): Promise<PluginActivation
             if (testModel) testConfig.testModel = testModel;
             if (testPrompt) testConfig.testPrompt = testPrompt;
 
-            const timeout = await settings.get<number>('multi-api-tester.timeout') ?? DEFAULT_TEST_CONFIG.timeout;
+            const timeout = settings.get<number>('multi-api-tester.timeout') ?? DEFAULT_TEST_CONFIG.timeout;
             testConfig.timeout = timeout;
 
             logger.info(`Testing site: ${site.name} (${site.baseUrl})`);
@@ -197,7 +206,7 @@ export async function activate(context: PluginContext): Promise<PluginActivation
                 return { success: false, error: `Site not found: ${siteId}` };
             }
 
-            const timeout = await settings.get<number>('multi-api-tester.timeout') ?? DEFAULT_TEST_CONFIG.timeout;
+            const timeout = settings.get<number>('multi-api-tester.timeout') ?? DEFAULT_TEST_CONFIG.timeout;
             logger.info(`Fetching models from: ${site.name}`);
             
             const result = await fetchModels(site, timeout);
@@ -276,7 +285,7 @@ export async function activate(context: PluginContext): Promise<PluginActivation
         }
 
         ui.showNotification(`Testing ${sites.length} sites...`, { type: 'info' });
-        const timeout = await settings.get<number>('multi-api-tester.timeout') ?? DEFAULT_TEST_CONFIG.timeout;
+        const timeout = settings.get<number>('multi-api-tester.timeout') ?? DEFAULT_TEST_CONFIG.timeout;
 
         for (const site of sites.filter(s => s.enabled)) {
             const result = await detectFirstWorkingFormat(site, { timeout });
@@ -302,7 +311,7 @@ export async function activate(context: PluginContext): Promise<PluginActivation
         }
 
         ui.showNotification(`Fetching models from ${sites.length} sites...`, { type: 'info' });
-        const timeout = await settings.get<number>('multi-api-tester.timeout') ?? DEFAULT_TEST_CONFIG.timeout;
+        const timeout = settings.get<number>('multi-api-tester.timeout') ?? DEFAULT_TEST_CONFIG.timeout;
 
         const results = await fetchAllModels(sites, timeout);
         const totalModels = results.reduce((sum, r) => sum + r.models.length, 0);
@@ -326,7 +335,7 @@ export async function activate(context: PluginContext): Promise<PluginActivation
         parameters: { type: 'object', properties: {} },
         execute: async () => {
             const sites = await siteStore.getAll();
-            const timeout = await settings.get<number>('multi-api-tester.timeout') ?? DEFAULT_TEST_CONFIG.timeout;
+            const timeout = settings.get<number>('multi-api-tester.timeout') ?? DEFAULT_TEST_CONFIG.timeout;
             const results = await fetchAllModels(sites, timeout);
             return { success: true, results };
         },
@@ -364,6 +373,30 @@ export async function activate(context: PluginContext): Promise<PluginActivation
     // =========================================================================
     const registerProvidersCmd = commands.register('registerProviders', async () => {
         await registerProviders();
+    });
+
+    // =========================================================================
+    // Command: Debug Status (show current state via notification)
+    // =========================================================================
+    const debugStatusCmd = commands.register('debugStatus', async () => {
+        const settingsSites = settings.get<SettingsSiteConfig[]>('multi-api-tester.sites') ?? [];
+        const storeSites = await siteStore.getAll();
+        const enabledSites = storeSites.filter(s => s.enabled);
+
+        const msg = [
+            `Settings sites: ${settingsSites.length}`,
+            `Store sites: ${storeSites.length}`,
+            `Enabled sites: ${enabledSites.length}`,
+            `Registered providers: ${providerDisposables.length}`,
+            '',
+            'Settings:',
+            ...settingsSites.map(s => `  - ${s.name}: ${s.baseUrl}`),
+            '',
+            'Store:',
+            ...storeSites.map(s => `  - ${s.name} (${s.enabled ? 'enabled' : 'disabled'}): ${s.id}`),
+        ].join('\n');
+
+        ui.showNotification(msg, { type: 'info' });
     });
 
     // =========================================================================
@@ -415,6 +448,7 @@ export async function activate(context: PluginContext): Promise<PluginActivation
             updateSiteTool.dispose();
             registerProvidersCmd.dispose();
             registerProvidersTool.dispose();
+            debugStatusCmd.dispose();
         },
     };
 }
