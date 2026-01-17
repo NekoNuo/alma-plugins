@@ -1,15 +1,28 @@
 /**
  * Multi API Tester Plugin
- * 
- * Test multiple AI API endpoints, detect API formats, and fetch available models.
+ *
+ * Test multiple AI API endpoints, detect API formats, and register them as providers.
  */
 
-import type { PluginContext, PluginActivation } from 'alma-plugin-api';
+import type { PluginContext, PluginActivation, Disposable } from 'alma-plugin-api';
 import { createSiteStore, type SiteStore } from './lib/site-store';
 import { detectApiFormat, detectFirstWorkingFormat } from './lib/api-detector';
 import { fetchModels, fetchAllModels } from './lib/model-fetcher';
+import { createProviderDefinition } from './lib/provider-factory';
 import type { SiteConfig, TestConfig, ApiFormat } from './lib/types';
 import { DEFAULT_TEST_CONFIG } from './lib/types';
+
+// ============================================================================
+// Settings Site Config (from manifest configuration)
+// ============================================================================
+
+interface SettingsSiteConfig {
+    name: string;
+    baseUrl: string;
+    apiKey: string;
+    enabled?: boolean;
+    format?: 'auto' | ApiFormat;
+}
 
 // ============================================================================
 // Parameter Schemas
@@ -49,11 +62,75 @@ const testSiteSchema = {
 // ============================================================================
 
 export async function activate(context: PluginContext): Promise<PluginActivation> {
-    const { logger, tools, commands, ui, storage, secrets, settings } = context;
+    const { logger, tools, commands, ui, storage, secrets, settings, providers } = context;
 
     logger.info('Multi API Tester plugin activated');
 
     const siteStore = createSiteStore(storage, secrets);
+    const providerDisposables: Disposable[] = [];
+
+    // =========================================================================
+    // Load sites from settings and sync to store
+    // =========================================================================
+    async function syncSitesFromSettings(): Promise<void> {
+        const settingsSites = await settings.get<SettingsSiteConfig[]>('multi-api-tester.sites') ?? [];
+
+        for (const settingSite of settingsSites) {
+            // Check if site already exists by name
+            const existingSites = await siteStore.getAll();
+            const existing = existingSites.find(s => s.name === settingSite.name);
+
+            if (!existing) {
+                // Add new site from settings
+                const format = settingSite.format === 'auto' ? undefined : settingSite.format;
+                await siteStore.add({
+                    name: settingSite.name,
+                    baseUrl: settingSite.baseUrl,
+                    apiKey: settingSite.apiKey,
+                    enabled: settingSite.enabled ?? true,
+                    detectedFormat: format as ApiFormat | undefined,
+                });
+                logger.info(`Loaded site from settings: ${settingSite.name}`);
+            }
+        }
+    }
+
+    // =========================================================================
+    // Register sites as providers
+    // =========================================================================
+    async function registerProviders(): Promise<void> {
+        // Dispose existing providers
+        for (const disposable of providerDisposables) {
+            disposable.dispose();
+        }
+        providerDisposables.length = 0;
+
+        const sites = await siteStore.getAll();
+        const enabledSites = sites.filter(s => s.enabled);
+
+        for (const site of enabledSites) {
+            try {
+                const providerDef = createProviderDefinition(site, logger);
+                const disposable = providers.register(providerDef);
+                providerDisposables.push(disposable);
+                logger.info(`Registered provider: ${site.name}`);
+            } catch (error) {
+                logger.error(`Failed to register provider ${site.name}:`, error);
+            }
+        }
+
+        ui.showNotification(`Registered ${providerDisposables.length} API providers`, { type: 'success' });
+    }
+
+    // =========================================================================
+    // Initial setup
+    // =========================================================================
+    await syncSitesFromSettings();
+
+    const autoRegister = await settings.get<boolean>('multi-api-tester.autoRegisterProviders') ?? true;
+    if (autoRegister) {
+        await registerProviders();
+    }
 
     // =========================================================================
     // Tool: List Sites
@@ -282,11 +359,48 @@ export async function activate(context: PluginContext): Promise<PluginActivation
     });
 
     // =========================================================================
+    // Command: Register Providers
+    // =========================================================================
+    const registerProvidersCmd = commands.register('registerProviders', async () => {
+        await registerProviders();
+    });
+
+    // =========================================================================
+    // Tool: Register Providers
+    // =========================================================================
+    const registerProvidersTool = tools.register('registerProviders', {
+        description: 'Register all enabled sites as AI providers',
+        parameters: { type: 'object', properties: {} },
+        execute: async () => {
+            await registerProviders();
+            const sites = await siteStore.getAll();
+            const enabledCount = sites.filter(s => s.enabled).length;
+            return { success: true, registeredCount: enabledCount };
+        },
+    });
+
+    // =========================================================================
+    // Listen for settings changes
+    // =========================================================================
+    const settingsDisposable = settings.onDidChange(async () => {
+        await syncSitesFromSettings();
+        const autoRegister = await settings.get<boolean>('multi-api-tester.autoRegisterProviders') ?? true;
+        if (autoRegister) {
+            await registerProviders();
+        }
+    });
+
+    // =========================================================================
     // Cleanup
     // =========================================================================
     return {
         dispose: () => {
             logger.info('Multi API Tester plugin deactivated');
+            // Dispose providers
+            for (const disposable of providerDisposables) {
+                disposable.dispose();
+            }
+            settingsDisposable.dispose();
             listSitesTool.dispose();
             testSiteTool.dispose();
             getModelsTool.dispose();
@@ -298,6 +412,8 @@ export async function activate(context: PluginContext): Promise<PluginActivation
             fetchAllModelsCmd.dispose();
             fetchAllModelsTool.dispose();
             updateSiteTool.dispose();
+            registerProvidersCmd.dispose();
+            registerProvidersTool.dispose();
         },
     };
 }

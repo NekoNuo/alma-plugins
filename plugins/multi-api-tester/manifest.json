@@ -2,7 +2,7 @@
     "id": "multi-api-tester",
     "name": "Multi API Tester",
     "version": "1.0.0",
-    "description": "Test multiple AI API endpoints, detect API formats, and fetch available models",
+    "description": "Test multiple AI API endpoints, detect API formats, and register them as providers",
     "author": {
         "name": "Alma Team",
         "email": "hello@alma.now"
@@ -13,13 +13,16 @@
     },
     "type": "composite",
     "permissions": [
+        "network:fetch",
         "notifications",
         "tools:register",
+        "providers:manage",
         "storage",
         "secrets"
     ],
     "activationEvents": ["onStartup"],
     "contributes": {
+        "providers": [],
         "tools": [
             {
                 "id": "multi-api-tester.listSites",
@@ -57,11 +60,50 @@
                 "id": "multi-api-tester.fetchAllModels",
                 "title": "Fetch All Models",
                 "category": "Multi API Tester"
+            },
+            {
+                "id": "multi-api-tester.registerProviders",
+                "title": "Register All Sites as Providers",
+                "category": "Multi API Tester"
             }
         ],
         "configuration": {
             "title": "Multi API Tester Settings",
             "properties": {
+                "multi-api-tester.sites": {
+                    "type": "array",
+                    "default": [],
+                    "description": "List of API sites to manage",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "name": {
+                                "type": "string",
+                                "description": "Display name for the site"
+                            },
+                            "baseUrl": {
+                                "type": "string",
+                                "description": "Base URL of the API"
+                            },
+                            "apiKey": {
+                                "type": "string",
+                                "description": "API key for authentication"
+                            },
+                            "enabled": {
+                                "type": "boolean",
+                                "default": true,
+                                "description": "Whether this site is enabled"
+                            },
+                            "format": {
+                                "type": "string",
+                                "enum": ["auto", "openai-chat", "anthropic", "openai-responses"],
+                                "default": "auto",
+                                "description": "API format (auto-detect if not specified)"
+                            }
+                        },
+                        "required": ["name", "baseUrl", "apiKey"]
+                    }
+                },
                 "multi-api-tester.timeout": {
                     "type": "number",
                     "default": 10000,
@@ -76,9 +118,22 @@
                     "type": "string",
                     "default": "Say 'Hello' in one word.",
                     "description": "Default prompt to use for API format testing"
+                },
+                "multi-api-tester.autoRegisterProviders": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Automatically register enabled sites as AI providers on startup"
                 }
             }
         }
-    }
+    },
+    "keywords": [
+        "api",
+        "tester",
+        "multi-provider",
+        "openai",
+        "anthropic",
+        "custom"
+    ]
 }
 
