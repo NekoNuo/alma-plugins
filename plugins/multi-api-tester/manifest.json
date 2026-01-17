@@ -1,0 +1,84 @@
+{
+    "id": "multi-api-tester",
+    "name": "Multi API Tester",
+    "version": "1.0.0",
+    "description": "Test multiple AI API endpoints, detect API formats, and fetch available models",
+    "author": {
+        "name": "Alma Team",
+        "email": "hello@alma.now"
+    },
+    "main": "main.js",
+    "engines": {
+        "alma": "^0.1.0"
+    },
+    "type": "composite",
+    "permissions": [
+        "notifications",
+        "tools:register",
+        "storage",
+        "secrets"
+    ],
+    "activationEvents": ["onStartup"],
+    "contributes": {
+        "tools": [
+            {
+                "id": "multi-api-tester.listSites",
+                "name": "List API Sites",
+                "description": "List all configured API sites"
+            },
+            {
+                "id": "multi-api-tester.testSite",
+                "name": "Test API Site",
+                "description": "Test a specific API site and detect its format"
+            },
+            {
+                "id": "multi-api-tester.getModels",
+                "name": "Get Models",
+                "description": "Get available models from a site"
+            }
+        ],
+        "commands": [
+            {
+                "id": "multi-api-tester.addSite",
+                "title": "Add API Site",
+                "category": "Multi API Tester"
+            },
+            {
+                "id": "multi-api-tester.removeSite",
+                "title": "Remove API Site",
+                "category": "Multi API Tester"
+            },
+            {
+                "id": "multi-api-tester.testAllSites",
+                "title": "Test All Sites",
+                "category": "Multi API Tester"
+            },
+            {
+                "id": "multi-api-tester.fetchAllModels",
+                "title": "Fetch All Models",
+                "category": "Multi API Tester"
+            }
+        ],
+        "configuration": {
+            "title": "Multi API Tester Settings",
+            "properties": {
+                "multi-api-tester.timeout": {
+                    "type": "number",
+                    "default": 10000,
+                    "description": "Request timeout in milliseconds"
+                },
+                "multi-api-tester.testModel": {
+                    "type": "string",
+                    "default": "gpt-3.5-turbo",
+                    "description": "Default model to use for API format testing"
+                },
+                "multi-api-tester.testPrompt": {
+                    "type": "string",
+                    "default": "Say 'Hello' in one word.",
+                    "description": "Default prompt to use for API format testing"
+                }
+            }
+        }
+    }
+}
+
