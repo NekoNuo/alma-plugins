@@ -1,0 +1,66 @@
+{
+    "id": "prompt-capture",
+    "name": "Prompt Capture",
+    "version": "1.0.0",
+    "description": "Captures and displays complete prompts sent to AI, with export capability",
+    "author": {
+        "name": "Alma Team",
+        "email": "hello@alma.now"
+    },
+    "main": "main.js",
+    "engines": {
+        "alma": "^0.1.0"
+    },
+    "type": "utility",
+    "permissions": ["chat:read", "settings:read", "settings:write"],
+    "activationEvents": ["onStartup"],
+    "contributes": {
+        "commands": [
+            {
+                "id": "prompt-capture.toggle",
+                "title": "Toggle Prompt Capture",
+                "category": "Prompt Capture"
+            },
+            {
+                "id": "prompt-capture.showHistory",
+                "title": "Show Captured Prompts",
+                "category": "Prompt Capture"
+            },
+            {
+                "id": "prompt-capture.clearHistory",
+                "title": "Clear Captured Prompts",
+                "category": "Prompt Capture"
+            },
+            {
+                "id": "prompt-capture.exportHistory",
+                "title": "Export Captured Prompts",
+                "category": "Prompt Capture"
+            }
+        ],
+        "configuration": {
+            "title": "Prompt Capture",
+            "properties": {
+                "promptCapture.enabled": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Enable prompt capturing"
+                },
+                "promptCapture.captureResponses": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Also capture AI responses"
+                },
+                "promptCapture.maxHistory": {
+                    "type": "number",
+                    "default": 100,
+                    "description": "Maximum number of prompts to keep in history"
+                },
+                "promptCapture.logToConsole": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Log captured prompts to console"
+                }
+            }
+        }
+    }
+}
