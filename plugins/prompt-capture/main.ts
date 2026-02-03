@@ -4,6 +4,7 @@ import type { PluginContext, PluginActivation, TokenUsage, ModelPricing } from '
  * Prompt Capture Plugin
  *
  * 捕获并记录发送给 AI 的完整提示词，支持导出和历史查看功能
+ * 捕获的内容会实时更新到配置界面中显示
  */
 
 // 捕获的提示词记录
@@ -35,6 +36,8 @@ export async function activate(context: PluginContext): Promise<PluginActivation
             const saved = await storage.local.get<CapturedPrompt[]>('capturedPrompts', []);
             capturedPrompts = saved;
             logger.debug(`Loaded ${capturedPrompts.length} prompts from storage`);
+            // 更新配置界面中的计数
+            await settings.update('promptCapture.captureCount', capturedPrompts.length);
         } catch (error) {
             logger.error('Failed to load prompt history:', error);
         }
@@ -54,6 +57,29 @@ export async function activate(context: PluginContext): Promise<PluginActivation
         }
     };
 
+    // 更新配置界面中显示的最新捕获内容
+    const updateSettingsDisplay = async (captured: CapturedPrompt) => {
+        try {
+            // 更新最新的 prompt 信息到 settings，这样会显示在配置界面
+            await settings.update('promptCapture.lastPrompt', captured.content);
+            await settings.update('promptCapture.lastModel', captured.model);
+            await settings.update('promptCapture.lastProvider', captured.providerId);
+            await settings.update('promptCapture.lastTimestamp', captured.timestamp);
+            await settings.update('promptCapture.captureCount', capturedPrompts.length);
+        } catch (error) {
+            logger.error('Failed to update settings display:', error);
+        }
+    };
+
+    // 更新响应到配置界面
+    const updateResponseDisplay = async (response: string) => {
+        try {
+            await settings.update('promptCapture.lastResponse', response);
+        } catch (error) {
+            logger.error('Failed to update response display:', error);
+        }
+    };
+
     // 获取设置
     const getSettings = () => ({
         enabled: settings.get<boolean>('promptCapture.enabled', true),
@@ -69,25 +95,25 @@ export async function activate(context: PluginContext): Promise<PluginActivation
     const formatPromptForDisplay = (prompt: CapturedPrompt): string => {
         const lines: string[] = [
             '═'.repeat(60),
-            `📝 Prompt Captured`,
+            `Prompt Captured`,
             '─'.repeat(60),
-            `🕐 Time: ${prompt.timestamp}`,
-            `🆔 Thread: ${prompt.threadId}`,
-            `🤖 Model: ${prompt.model}`,
-            `🏢 Provider: ${prompt.providerId}`,
+            `Time: ${prompt.timestamp}`,
+            `Thread: ${prompt.threadId}`,
+            `Model: ${prompt.model}`,
+            `Provider: ${prompt.providerId}`,
             '─'.repeat(60),
-            '📄 Content:',
+            'Content:',
             prompt.content,
         ];
 
         if (prompt.response) {
             lines.push('─'.repeat(60));
-            lines.push('💬 Response:');
+            lines.push('Response:');
             lines.push(prompt.response.content);
 
             if (prompt.response.usage) {
                 lines.push('─'.repeat(60));
-                lines.push('📊 Token Usage:');
+                lines.push('Token Usage:');
                 lines.push(`   Prompt: ${prompt.response.usage.promptTokens}`);
                 lines.push(`   Completion: ${prompt.response.usage.completionTokens}`);
                 lines.push(`   Total: ${prompt.response.usage.totalTokens}`);
@@ -107,7 +133,7 @@ export async function activate(context: PluginContext): Promise<PluginActivation
     // 订阅消息发送事件 - 捕获提示词
     const willSendDisposable = events.on(
         'chat.message.willSend',
-        (input, _output) => {
+        async (input, _output) => {
             const config = getSettings();
 
             if (!config.enabled) {
@@ -124,6 +150,9 @@ export async function activate(context: PluginContext): Promise<PluginActivation
             };
 
             capturedPrompts.push(captured);
+
+            // 更新配置界面显示
+            await updateSettingsDisplay(captured);
 
             if (config.logToConsole) {
                 logger.info('=== CAPTURED PROMPT ===');
@@ -146,7 +175,7 @@ export async function activate(context: PluginContext): Promise<PluginActivation
     // 订阅消息接收事件 - 捕获响应
     const didReceiveDisposable = events.on(
         'chat.message.didReceive',
-        (input, _output) => {
+        async (input, _output) => {
             const config = getSettings();
 
             if (!config.enabled || !config.captureResponses) {
@@ -164,6 +193,9 @@ export async function activate(context: PluginContext): Promise<PluginActivation
                     usage: input.response.usage,
                     pricing: input.pricing,
                 };
+
+                // 更新配置界面显示响应
+                await updateResponseDisplay(input.response.content);
 
                 if (config.logToConsole) {
                     logger.info('=== CAPTURED RESPONSE ===');
@@ -231,6 +263,13 @@ export async function activate(context: PluginContext): Promise<PluginActivation
         if (confirmed) {
             capturedPrompts = [];
             await storage.local.delete('capturedPrompts');
+            // 清空配置界面显示
+            await settings.update('promptCapture.lastPrompt', '');
+            await settings.update('promptCapture.lastResponse', '');
+            await settings.update('promptCapture.lastModel', '');
+            await settings.update('promptCapture.lastProvider', '');
+            await settings.update('promptCapture.lastTimestamp', '');
+            await settings.update('promptCapture.captureCount', 0);
             ui.showNotification('Prompt history cleared', { type: 'success' });
         }
     });

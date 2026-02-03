@@ -12,7 +12,7 @@
     },
     "type": "ui",
     "activationEvents": ["onStartup"],
-    "permissions": ["chat:read", "notifications"],
+    "permissions": ["chat:read", "notifications", "settings:read", "settings:write"],
     "contributes": {
         "commands": [
             {
@@ -54,6 +54,36 @@
                     "type": "boolean",
                     "default": true,
                     "description": "Log captured prompts to console"
+                },
+                "promptCapture.lastPrompt": {
+                    "type": "string",
+                    "default": "",
+                    "description": "Last captured prompt (auto-updated)"
+                },
+                "promptCapture.lastResponse": {
+                    "type": "string",
+                    "default": "",
+                    "description": "Last captured AI response (auto-updated)"
+                },
+                "promptCapture.lastModel": {
+                    "type": "string",
+                    "default": "",
+                    "description": "Last used model (auto-updated)"
+                },
+                "promptCapture.lastProvider": {
+                    "type": "string",
+                    "default": "",
+                    "description": "Last used provider (auto-updated)"
+                },
+                "promptCapture.lastTimestamp": {
+                    "type": "string",
+                    "default": "",
+                    "description": "Last capture time (auto-updated)"
+                },
+                "promptCapture.captureCount": {
+                    "type": "number",
+                    "default": 0,
+                    "description": "Total number of captured prompts (auto-updated)"
                 }
             }
         }
