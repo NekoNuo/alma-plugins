@@ -184,7 +184,7 @@ export async function activate(context: PluginContext): Promise<PluginActivation
     );
 
     // 命令：切换捕获状态
-    const toggleDisposable = commands.register('toggle', async () => {
+    const toggleDisposable = commands.register('promptCapture.toggle', async () => {
         const current = settings.get<boolean>('promptCapture.enabled', true);
         await settings.update('promptCapture.enabled', !current);
 
@@ -193,7 +193,7 @@ export async function activate(context: PluginContext): Promise<PluginActivation
     });
 
     // 命令：显示历史记录
-    const showHistoryDisposable = commands.register('showHistory', async () => {
+    const showHistoryDisposable = commands.register('promptCapture.showHistory', async () => {
         if (capturedPrompts.length === 0) {
             ui.showNotification('No captured prompts yet', { type: 'info' });
             return;
@@ -221,7 +221,7 @@ export async function activate(context: PluginContext): Promise<PluginActivation
     });
 
     // 命令：清除历史记录
-    const clearHistoryDisposable = commands.register('clearHistory', async () => {
+    const clearHistoryDisposable = commands.register('promptCapture.clearHistory', async () => {
         const confirmed = await ui.showConfirmDialog('Clear all captured prompts?', {
             type: 'warning',
             confirmLabel: 'Clear',
@@ -236,7 +236,7 @@ export async function activate(context: PluginContext): Promise<PluginActivation
     });
 
     // 命令：导出历史记录
-    const exportHistoryDisposable = commands.register('exportHistory', async () => {
+    const exportHistoryDisposable = commands.register('promptCapture.exportHistory', async () => {
         if (capturedPrompts.length === 0) {
             ui.showNotification('No prompts to export', { type: 'info' });
             return;

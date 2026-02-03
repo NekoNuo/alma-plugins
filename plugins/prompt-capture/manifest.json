@@ -4,37 +4,32 @@
     "version": "1.0.0",
     "description": "Captures and displays complete prompts sent to AI, with export capability",
     "author": {
-        "name": "Alma Team",
-        "email": "hello@alma.now"
+        "name": "Alma Team"
     },
     "main": "main.js",
     "engines": {
         "alma": "^0.1.0"
     },
-    "type": "utility",
-    "permissions": ["chat:read", "settings:read", "settings:write"],
+    "type": "ui",
     "activationEvents": ["onStartup"],
+    "permissions": ["chat:read", "notifications"],
     "contributes": {
         "commands": [
             {
-                "id": "prompt-capture.toggle",
-                "title": "Toggle Prompt Capture",
-                "category": "Prompt Capture"
+                "id": "promptCapture.toggle",
+                "title": "Toggle Prompt Capture"
             },
             {
-                "id": "prompt-capture.showHistory",
-                "title": "Show Captured Prompts",
-                "category": "Prompt Capture"
+                "id": "promptCapture.showHistory",
+                "title": "Show Captured Prompts"
             },
             {
-                "id": "prompt-capture.clearHistory",
-                "title": "Clear Captured Prompts",
-                "category": "Prompt Capture"
+                "id": "promptCapture.clearHistory",
+                "title": "Clear Captured Prompts"
             },
             {
-                "id": "prompt-capture.exportHistory",
-                "title": "Export Captured Prompts",
-                "category": "Prompt Capture"
+                "id": "promptCapture.exportHistory",
+                "title": "Export Captured Prompts"
             }
         ],
         "configuration": {
